@@ -1,30 +1,44 @@
-#!/usr/bin/env bash
-# Installs, configures, and starts the server
+#!/bin/bash
+
+# Function to configure Nginx redirection
+configure_redirection() {
+    cat <<EOF > /etc/nginx/sites-available/default
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name _;
+
+    location /redirect_me {
+        return 301 http://example.com/new_page;
+    }
+
+    # Other configurations...
+
+}
+EOF
+
+    # Restart Nginx service
+    service nginx restart
+}
+
+# Update package lists and install nginx with the '-y' flag for non-interactive install
 apt-get update
-apt-get -y install nginx
-sudo ufw allow 'Nginx HTTP'
-mkdir -p /var/www/html/
-sudo chmod -R 755 /var/www
-echo 'Hello World!' > /var/www/html/index.html
-SERVER_CONFIG=\
-"server {
-	listen 80 default_server;
-	listen [::]:80 default_server;
-	root /var/www/html;
-	index index.html index.htm index.nginx-debian.html;
-	server_name _;
-	location / {
-		try_files \$uri \$uri/ =404;
-	}
-	if (\$request_filename ~ redirect_me){
-		rewrite ^ https://sketchfab.com/bluepeno/models permanent;
-	}
-}"
+apt-get install -y nginx
 
-bash -c "echo -e '$SERVER_CONFIG' > /etc/nginx/sites-enabled/default"
+# Ensure nginx is listening on port 80
+sed -i 's/^\(listen.*\)80;/\180;/g' /etc/nginx/sites-available/default
 
-if [ "$(pgrep -c nginx)" -le 0 ]; then
-	service nginx start
-else
-	service nginx restart
-fi
+# Create an index.html file with some content (optional)
+echo "Welcome to my server!" > /var/www/html/index.html
+
+# Call function to configure redirection
+configure_redirection
+
+# Output to indicate script completion
+echo "Nginx redirection configured successfully."
+
